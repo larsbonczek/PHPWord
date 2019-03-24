@@ -79,11 +79,15 @@ class Table extends AbstractStyle
 
         $this->writeTblWidth($xmlWriter, 'w:tblW', $style->getUnit(), $style->getWidth());
         $this->writeTblWidth($xmlWriter, 'w:tblCellSpacing', TblWidth::TWIP, $style->getCellSpacing());
+        $this->writeIndent($xmlWriter, $style);
         $this->writeLayout($xmlWriter, $style->getLayout());
 
         // Position
         $styleWriter = new TablePosition($xmlWriter, $style->getPosition());
         $styleWriter->write();
+
+        //Right to left
+        $xmlWriter->writeElementIf($style->isBidiVisual() !== null, 'w:bidiVisual', 'w:val', $this->writeOnOf($style->isBidiVisual()));
 
         $this->writeMargin($xmlWriter, $style);
         $this->writeBorder($xmlWriter, $style);
@@ -215,5 +219,20 @@ class Table extends AbstractStyle
     public function setWidth($value = null)
     {
         $this->width = $value;
+    }
+
+    /**
+     * @param XMLWriter $xmlWriter
+     * @param TableStyle $style
+     */
+    private function writeIndent(XMLWriter $xmlWriter, TableStyle $style)
+    {
+        $indent = $style->getIndent();
+
+        if ($indent === null) {
+            return;
+        }
+
+        $this->writeTblWidth($xmlWriter, 'w:tblInd', $indent->getType(), $indent->getValue());
     }
 }

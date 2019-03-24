@@ -18,6 +18,7 @@
 namespace PhpOffice\PhpWord\Reader\Word2007;
 
 use PhpOffice\Common\XMLReader;
+use PhpOffice\PhpWord\ComplexType\TblWidth as TblWidthComplexType;
 use PhpOffice\PhpWord\Element\AbstractContainer;
 use PhpOffice\PhpWord\Element\TextRun;
 use PhpOffice\PhpWord\Element\TrackChange;
@@ -260,6 +261,20 @@ abstract class AbstractPart
                 }
                 $parent->addImage($imageSource);
             }
+        } elseif ($node->nodeName == 'w:drawing') {
+            // Office 2011 Image
+            $xmlReader->registerNamespace('wp', 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing');
+            $xmlReader->registerNamespace('r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships');
+            $xmlReader->registerNamespace('pic', 'http://schemas.openxmlformats.org/drawingml/2006/picture');
+            $xmlReader->registerNamespace('a', 'http://schemas.openxmlformats.org/drawingml/2006/main');
+
+            $name = $xmlReader->getAttribute('name', $node, 'wp:inline/a:graphic/a:graphicData/pic:pic/pic:nvPicPr/pic:cNvPr');
+            $embedId = $xmlReader->getAttribute('r:embed', $node, 'wp:inline/a:graphic/a:graphicData/pic:pic/pic:blipFill/a:blip');
+            $target = $this->getMediaTarget($docPart, $embedId);
+            if (!is_null($target)) {
+                $imageSource = "zip://{$this->docFile}#{$target}";
+                $parent->addImage($imageSource, null, false, $name);
+            }
         } elseif ($node->nodeName == 'w:object') {
             // Object
             $rId = $xmlReader->getAttribute('r:id', $node, 'o:OLEObject');
@@ -282,6 +297,8 @@ abstract class AbstractPart
                 $target = $this->getMediaTarget($docPart, $rId);
                 if (!is_null($target)) {
                     $parent->addLink($target, $textContent, $fontStyle, $paragraphStyle);
+                } else {
+                    $parent->addText($textContent, $fontStyle, $paragraphStyle);
                 }
             } else {
                 /** @var AbstractElement $element */
@@ -321,7 +338,7 @@ abstract class AbstractPart
             } elseif ('w:tr' == $tblNode->nodeName) { // Row
                 $rowHeight = $xmlReader->getAttribute('w:val', $tblNode, 'w:trPr/w:trHeight');
                 $rowHRule = $xmlReader->getAttribute('w:hRule', $tblNode, 'w:trPr/w:trHeight');
-                $rowHRule = $rowHRule == 'exact' ? true : false;
+                $rowHRule = $rowHRule == 'exact';
                 $rowStyle = array(
                     'tblHeader'   => $xmlReader->elementExists('w:trPr/w:tblHeader', $tblNode),
                     'cantSplit'   => $xmlReader->elementExists('w:trPr/w:cantSplit', $tblNode),
@@ -429,6 +446,7 @@ abstract class AbstractPart
             'rtl'                 => array(self::READ_TRUE,  'w:rtl'),
             'lang'                => array(self::READ_VALUE, 'w:lang'),
             'position'            => array(self::READ_VALUE, 'w:position'),
+            'hidden'              => array(self::READ_TRUE,  'w:vanish'),
         );
 
         return $this->readStyleDefs($xmlReader, $styleNode, $styleDefs);
@@ -465,12 +483,18 @@ abstract class AbstractPart
                     $styleDefs["border{$ucfSide}Style"] = array(self::READ_VALUE, "w:tblBorders/w:$side", 'w:val');
                 }
                 $styleDefs['layout'] = array(self::READ_VALUE, 'w:tblLayout', 'w:type');
+                $styleDefs['bidiVisual'] = array(self::READ_TRUE, 'w:bidiVisual');
                 $styleDefs['cellSpacing'] = array(self::READ_VALUE, 'w:tblCellSpacing', 'w:w');
                 $style = $this->readStyleDefs($xmlReader, $styleNode, $styleDefs);
 
                 $tablePositionNode = $xmlReader->getElement('w:tblpPr', $styleNode);
                 if ($tablePositionNode !== null) {
                     $style['position'] = $this->readTablePosition($xmlReader, $tablePositionNode);
+                }
+
+                $indentNode = $xmlReader->getElement('w:tblInd', $styleNode);
+                if ($indentNode !== null) {
+                    $style['indent'] = $this->readTableIndent($xmlReader, $indentNode);
                 }
             }
         }
@@ -501,6 +525,24 @@ abstract class AbstractPart
         );
 
         return $this->readStyleDefs($xmlReader, $domNode, $styleDefs);
+    }
+
+    /**
+     * Read w:tblInd
+     *
+     * @param \PhpOffice\Common\XMLReader $xmlReader
+     * @param \DOMElement $domNode
+     * @return TblWidthComplexType
+     */
+    private function readTableIndent(XMLReader $xmlReader, \DOMElement $domNode)
+    {
+        $styleDefs = array(
+            'value' => array(self::READ_VALUE, '.', 'w:w'),
+            'type'  => array(self::READ_VALUE, '.', 'w:type'),
+        );
+        $styleDefs = $this->readStyleDefs($xmlReader, $domNode, $styleDefs);
+
+        return new TblWidthComplexType((int) $styleDefs['value'], $styleDefs['type']);
     }
 
     /**
@@ -564,6 +606,8 @@ abstract class AbstractPart
                     return $possibleAttribute;
                 }
             }
+
+            return null;
         }
 
         return $attributes;

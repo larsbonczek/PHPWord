@@ -17,6 +17,7 @@
 
 namespace PhpOffice\PhpWord\Style;
 
+use PhpOffice\PhpWord\ComplexType\TblWidth as TblWidthComplexType;
 use PhpOffice\PhpWord\SimpleType\Jc;
 use PhpOffice\PhpWord\SimpleType\JcTable;
 use PhpOffice\PhpWord\SimpleType\TblWidth;
@@ -158,6 +159,24 @@ class Table extends Border
      * @var \PhpOffice\PhpWord\Style\TablePosition
      */
     private $position;
+
+    /** @var TblWidthComplexType|null */
+    private $indent;
+
+    /**
+     * The width of each column, computed based on the max cell width of each column
+     *
+     * @var int[]
+     */
+    private $columnWidths;
+
+    /**
+     * Visually Right to Left Table
+     *
+     * @see  http://www.datypic.com/sc/ooxml/e-w_bidiVisual-1.html
+     * @var bool
+     */
+    private $bidiVisual = false;
 
     /**
      * Create new table style
@@ -721,6 +740,70 @@ class Table extends Border
     public function setPosition($value = null)
     {
         $this->setObjectVal($value, 'TablePosition', $this->position);
+
+        return $this;
+    }
+
+    /**
+     * @return TblWidthComplexType
+     */
+    public function getIndent()
+    {
+        return $this->indent;
+    }
+
+    /**
+     * @param TblWidthComplexType $indent
+     * @return self
+     * @see http://www.datypic.com/sc/ooxml/e-w_tblInd-1.html
+     */
+    public function setIndent(TblWidthComplexType $indent)
+    {
+        $this->indent = $indent;
+
+        return $this;
+    }
+
+    /**
+     * Get the columnWidths
+     *
+     * @return null|int[]
+     */
+    public function getColumnWidths()
+    {
+        return $this->columnWidths;
+    }
+
+    /**
+     * The column widths
+     *
+     * @param int[] $value
+     */
+    public function setColumnWidths(array $value = null)
+    {
+        $this->columnWidths = $value;
+    }
+
+    /**
+     * Get bidiVisual
+     *
+     * @return bool
+     */
+    public function isBidiVisual()
+    {
+        return $this->bidiVisual;
+    }
+
+    /**
+     * Set bidiVisual
+     *
+     * @param bool $bidi
+     *            Set to true to visually present table as Right to Left
+     * @return self
+     */
+    public function setBidiVisual($bidi)
+    {
+        $this->bidiVisual = $bidi;
 
         return $this;
     }
