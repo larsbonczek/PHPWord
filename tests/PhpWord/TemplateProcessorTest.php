@@ -469,15 +469,21 @@ final class TemplateProcessorTest extends \PHPUnit\Framework\TestCase
     {
         $templateProcessor = new TemplateProcessor(__DIR__ . '/_files/templates/clone-delete-block.docx');
 
-        $this->assertEquals(
-            array('DELETEME', '/DELETEME', 'CLONEME', 'blockVariable', '/CLONEME'),
-            $templateProcessor->getVariables()
-        );
-
         $docName = 'clone-delete-block-result.docx';
         $templateProcessor->cloneBlock('CLONEME', 3);
+        $templateProcessor->cloneBlock('CLONEMEONCE');
         $templateProcessor->deleteBlock('DELETEME');
-        $templateProcessor->setValue('blockVariable#3', 'Test');
+        $templateProcessor->replaceBlock('REPLACEME', '
+          <w:p>
+            <w:pPr>
+              <w:pStyle w:val="Normal"/>
+              <w:rPr/>
+            </w:pPr>
+            <w:r>
+              <w:rPr/>
+              <w:t>You have been replaced!</w:t>
+            </w:r>
+          </w:p>');
         $templateProcessor->saveAs($docName);
         $docFound = file_exists($docName);
         unlink($docName);
@@ -604,71 +610,6 @@ final class TemplateProcessorTest extends \PHPUnit\Framework\TestCase
         $templateProcessor->cloneBlock('CLONEME', 3);
 
         $this->assertEquals(3, substr_count($templateProcessor->getMainPart(), 'This block will be cloned with ${variable}'));
-    }
-
-    /**
-     * @covers ::cloneBlock
-     * @test
-     */
-    public function testCloneBlockWithVariables()
-    {
-        $mainPart = '<?xml version="1.0" encoding="UTF-8"?>
-        <w:p>
-            <w:r>
-                <w:rPr></w:rPr>
-                <w:t>${CLONEME}</w:t>
-            </w:r>
-        </w:p>
-        <w:p>
-            <w:r>
-                <w:t xml:space="preserve">Address ${address}, Street ${street}</w:t>
-            </w:r>
-        </w:p>
-        <w:p>
-            <w:r w:rsidRPr="00204FED">
-                <w:t>${/CLONEME}</w:t>
-            </w:r>
-        </w:p>';
-
-        $templateProcessor = new TestableTemplateProcesor($mainPart);
-        $templateProcessor->cloneBlock('CLONEME', 3, true, true);
-
-        $this->assertContains('Address ${address#1}, Street ${street#1}', $templateProcessor->getMainPart());
-        $this->assertContains('Address ${address#2}, Street ${street#2}', $templateProcessor->getMainPart());
-        $this->assertContains('Address ${address#3}, Street ${street#3}', $templateProcessor->getMainPart());
-    }
-
-    public function testCloneBlockWithVariableReplacements()
-    {
-        $mainPart = '<?xml version="1.0" encoding="UTF-8"?>
-        <w:p>
-            <w:r>
-                <w:rPr></w:rPr>
-                <w:t>${CLONEME}</w:t>
-            </w:r>
-        </w:p>
-        <w:p>
-            <w:r>
-                <w:t xml:space="preserve">City: ${city}, Street: ${street}</w:t>
-            </w:r>
-        </w:p>
-        <w:p>
-            <w:r w:rsidRPr="00204FED">
-                <w:t>${/CLONEME}</w:t>
-            </w:r>
-        </w:p>';
-
-        $replacements = array(
-            array('city' => 'London', 'street' => 'Baker Street'),
-            array('city' => 'New York', 'street' => '5th Avenue'),
-            array('city' => 'Rome', 'street' => 'Via della Conciliazione'),
-        );
-        $templateProcessor = new TestableTemplateProcesor($mainPart);
-        $templateProcessor->cloneBlock('CLONEME', 0, true, false, $replacements);
-
-        $this->assertContains('City: London, Street: Baker Street', $templateProcessor->getMainPart());
-        $this->assertContains('City: New York, Street: 5th Avenue', $templateProcessor->getMainPart());
-        $this->assertContains('City: Rome, Street: Via della Conciliazione', $templateProcessor->getMainPart());
     }
 
     /**
