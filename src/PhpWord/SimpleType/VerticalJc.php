@@ -15,31 +15,22 @@
  * @license     http://www.gnu.org/licenses/lgpl.txt LGPL version 3
  */
 
-namespace PhpOffice\PhpWord\Writer\RTF\Style;
+namespace PhpOffice\PhpWord\SimpleType;
+
+use PhpOffice\PhpWord\Shared\AbstractEnum;
 
 /**
- * RTF indentation style writer
+ * Vertical Alignment Type.
  *
- * @since 0.11.0
+ * Introduced in ISO/IEC-29500:2008.
+ *
+ * @see http://www.datypic.com/sc/ooxml/t-w_ST_VerticalJc.html
+ * @since 0.17.0
  */
-class Indentation extends AbstractStyle
+final class VerticalJc extends AbstractEnum
 {
-    /**
-     * Write style
-     *
-     * @return string
-     */
-    public function write()
-    {
-        $style = $this->getStyle();
-        if (!$style instanceof \PhpOffice\PhpWord\Style\Indentation) {
-            return '';
-        }
-
-        $content = '\fi' . round($style->getFirstLine());
-        $content .= '\li' . round($style->getLeft());
-        $content .= '\ri' . round($style->getRight());
-
-        return $content . ' ';
-    }
+    const TOP = 'top';
+    const CENTER = 'center';
+    const BOTH = 'both';
+    const BOTTOM = 'bottom';
 }
